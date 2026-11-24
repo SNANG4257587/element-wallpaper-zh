@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>元素周期表 · 日语五十音图</title>
+<style>
+  :root {
+    --bg: #0b0e13;
+    --panel2: #1b212a;
+    --line: #2a313c;
+    --text: #e8edf3;
+    --muted: #8d98a8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; }
+  body {
+    overflow: hidden;
+    background: radial-gradient(120vw 120vh at 50% 40%, #19222f 0%, var(--bg) 72%);
+    color: var(--text); font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 1.6vh;
+  }
+  /* 整张纸铺满屏幕，底部预留任务栏安全区，不被遮挡 */
+  .sheet {
+    width: 97vw; height: 91.5vh;
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0));
+    border: 1px solid #313a47; border-radius: 18px; padding: 1.1vh 1.3vw;
+    box-shadow: 0 24px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+    overflow: hidden;
+  }
+  header { flex: 0 0 5vh; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 .6vw; }
+  h1 { margin: 0; font-size: clamp(16px, 2.5vh, 28px); font-weight: 600; letter-spacing: 2px; color: #eaf0f7; line-height: 1.1; }
+  h1 .amp { color: #5b8def; margin: 0 8px; font-weight: 400; }
+  .sub { margin-top: .4vh; color: #93a0b1; font-size: clamp(9px, 1.25vh, 13px); letter-spacing: .3px; }
+  .search {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; color: var(--text);
+    padding: .7vh 12px; font-size: clamp(10px, 1.3vh, 14px); width: 17vw; outline: none; font-family: inherit;
+  }
+  .search:focus { border-color: #5b8def; box-shadow: 0 0 0 3px rgba(91,141,239,.15); }
+  .legend { flex: 0 0 3.4vh; display: flex; flex-wrap: nowrap; justify-content: center; gap: .55vw; margin: 0 0 .4vh; overflow: hidden; }
+  .legend button {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 999px; padding: .2vh .8vw; font-size: clamp(9px, 1.2vh, 12px); cursor: pointer;
+    display: flex; align-items: center; gap: 5px; font-family: inherit; transition: .15s; white-space: nowrap;
+  }
+  .legend button:hover { color: var(--text); border-color: #4a5565; }
+  .legend button.on { color: var(--text); border-color: #6f7c8f; background: #242c38; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+
+  /* 主体：左周期表 + 右五十音，并排铺满 */
+  .main { flex: 1 1 auto; min-height: 0; display: flex; gap: 1.4vw; }
+
+  /* 元素周期表 */
+  .ptable {
+    flex: 0 0 63%; min-width: 0;
+    display: grid; grid-template-columns: repeat(18, minmax(0, 1fr));
+    grid-template-rows: repeat(7, 1fr) 1.4fr repeat(2, 1fr);
+    gap: .4vh .25vw;
+  }
+  .el {
+    position: relative; border: 1px solid rgba(255,255,255,.10); border-radius: 5px;
+    background: var(--panel2); cursor: pointer; padding: .5vh .35vw;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: transform .12s, box-shadow .12s, opacity .12s; overflow: hidden;
+  }
+  .el::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--c); opacity: .95; }
+  .el:hover { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,.55); z-index: 2; }
+  .el.sel { outline: 2px solid var(--c); outline-offset: 1px; }
+  .el.dim { opacity: .16; }
+  .el.match { box-shadow: 0 0 0 2px #f2f6ff, 0 0 16px rgba(255,255,255,.3); }
+  .num { font-size: clamp(8px, 1.05vh, 12px); color: #a6b1c0; line-height: 1; }
+  .sym { font-size: clamp(16px, 3.5vh, 40px); font-weight: 700; line-height: 1; color: var(--c); font-family: Arial, sans-serif; }
+  .cn { font-size: clamp(10px, 1.45vh, 16px); line-height: 1; color: #e2e9f1; white-space: nowrap; }
+  .mass { font-size: clamp(7px, .9vh, 10px); color: #96a2b2; line-height: 1; font-family: Arial, sans-serif; }
+  .gapnote { grid-row: 8; grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; }
+  .gapnote span { color: #6b7788; font-size: clamp(8px, 1vh, 11px); letter-spacing: 4px; }
+
+  /* 右侧五十音 */
+  .kana-side { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+  .kcap { color: #a0acbc; font-size: clamp(9px, 1.25vh, 14px); letter-spacing: 2px; margin: 0 0 .5vh 2px; }
+  .kana-grid { display: grid; grid-template-columns: 2.6vw repeat(5, minmax(0, 1fr)); gap: .3vh .25vw; }
+  .kana-grid .colh {
+    display: flex; align-items: center; justify-content: center;
+    color: #7f8b9c; font-size: clamp(8px, 1.1vh, 12px); letter-spacing: 1px;
+  }
+  .kana-grid .rowh {
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(9px, 1.4vh, 15px); letter-spacing: 1px; border-radius: 5px;
+    background: rgba(255,255,255,.03); color: var(--c);
+  }
+  .kana-cell {
+    position: relative; border: 1px solid rgba(255,255,255,.09); border-radius: 5px;
+    background: var(--panel2); height: 3.9vh; padding: 0 .6vw;
+    display: flex; flex-direction: row; align-items: center;
+    overflow: hidden; cursor: pointer;
+    transition: background .12s, transform .12s, box-shadow .12s;
+  }
+  .kana-cell::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--c); opacity: .9; }
+  .kana-cell:hover { background: #252e3a; transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,.5); z-index: 2; }
+  .kana-cell.clicked { box-shadow: inset 0 0 0 2px var(--c); }
+  .kana-cell .hira { font-size: clamp(16px, 2.9vh, 34px); line-height: 1; color: #f2f5f9; font-family: "Yu Gothic", "MS Gothic", "Microsoft YaHei", sans-serif; }
+  .kana-cell .side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; margin-left: auto; }
+  .kana-cell .kata { font-size: clamp(10px, 1.45vh, 16px); line-height: 1; color: var(--c); font-family: "Yu Gothic", "MS Gothic", "Microsoft YaHei", sans-serif; }
+  .kana-cell .roma { font-size: clamp(8px, 1.1vh, 12px); line-height: 1; color: #9ba7b7; font-family: Arial, sans-serif; }
+  .kana-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+  .kana-cell.empty::before { display: none; }
+  .kana-cell.empty:hover { background: transparent; transform: none; box-shadow: none; }
+
+  /* 点击浮层：元素详情 + 假名注解组词 */
+  .detail {
+    position: fixed; right: 28px; bottom: 140px; width: 640px; max-width: calc(100vw - 56px);
+    background: #1b212a; border: 1px solid #3a4452; border-radius: 14px; padding: 18px 22px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7); display: none; z-index: 50;
+  }
+  .detail.show { display: grid; grid-template-columns: 108px 1fr; gap: 20px; }
+  .detail-close { position: absolute; right: 12px; top: 8px; color: #9aa6b6; font-size: 18px; cursor: pointer; line-height: 1; }
+  .voice-btn {
+    margin-top: 10px; border: 1px solid #3a4452; background: #232b36; color: #cbd5e1;
+    border-radius: 8px; padding: 6px 13px; font-size: 12px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: .15s;
+  }
+  .voice-btn:hover { border-color: #5b8def; color: #fff; }
+  .voice-btn.speaking { color: #8ecbff; border-color: #5b8def; background: #243044; }
+  .bigel, .kbig {
+    width: 108px; height: 108px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+    background: #232b36; display: flex; flex-direction: column; justify-content: space-between;
+    padding: 9px 11px; position: relative; overflow: hidden;
+  }
+  .bigel::before, .kbig::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--c, #5b8def); }
+  .bigel .s { font-size: 42px; font-weight: 700; line-height: 1; color: var(--c, #5b8def); font-family: Arial, sans-serif; }
+  .bigel .n { font-size: 11px; color: var(--muted); }
+  .kbig { align-items: center; justify-content: center; gap: 6px; }
+  .kbig .kh { font-size: 50px; line-height: 1; color: #f2f5f9; font-family: "Yu Gothic", "MS Gothic", "Microsoft YaHei", sans-serif; }
+  .kbig .kline { display: flex; gap: 12px; align-items: baseline; }
+  .kbig .kk { font-size: 20px; color: var(--c, #5b8def); font-family: "Yu Gothic", "MS Gothic", "Microsoft YaHei", sans-serif; }
+  .kbig .kr { font-size: 14px; color: #9aa6b6; font-family: Arial, sans-serif; }
+  .dtitle { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .dtitle h2 { margin: 0; font-size: 22px; }
+  .dtitle .tag { font-size: 11px; color: var(--c, var(--muted)); border: 1px solid currentColor; border-radius: 999px; padding: 1px 9px; }
+  .props { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 12px; }
+  .prop { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  .prop .k { color: var(--muted); font-size: 10px; }
+  .prop .v { font-size: 13px; margin-top: 2px; }
+  .desc { margin-top: 10px; color: #b3bfcd; font-size: 12px; line-height: 1.7; }
+  .knote { margin: 9px 0 11px; color: #c3cddb; font-size: 13px; line-height: 1.6; }
+  .kwords { display: grid; gap: 7px; }
+  .kword { display: flex; align-items: baseline; gap: 12px; background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; }
+  .kword .wj { font-size: 17px; color: #eef2f7; font-family: "Yu Gothic", "MS Gothic", "Microsoft YaHei", sans-serif; min-width: 96px; }
+  .kword .wk { font-size: 13px; color: #9aa6b6; min-width: 70px; }
+  .kword .wc { font-size: 13px; color: var(--c, #8ecbff); }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div>
+      <h1>元素周期表<span class="amp">·</span>日语五十音图</h1>
+      <div class="sub">单击看详情 · 双击朗读标准发音（日语/中文）· 支持搜索与分类筛选</div>
+    </div>
+    <input id="search" class="search" type="text" placeholder="搜索元素，如：铁 / Fe / 26" autocomplete="off">
+  </header>
+  <div class="legend" id="legend"></div>
+  <div class="main">
+    <div class="ptable" id="ptable">
+      <div class="gapnote"><span>镧 系 与 锕 系</span></div>
+    </div>
+    <div class="kana-side">
+      <div>
+        <div class="kcap">清音 · 拨音（单击看注解 · 双击朗读）</div>
+        <div class="kana-grid" id="kanaGrid"></div>
+      </div>
+      <div>
+        <div class="kcap">浊音 · 半浊音（单击看注解 · 双击朗读）</div>
+        <div class="kana-grid" id="exGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="detail" id="detail"></div>
+
+<script>
+/* ========== 标准语音朗读（双击触发）==========
+   日语假名/例词：播放本地预生成的标准日语发音（voice/ 目录）
+   元素详情：用系统自带中文语音朗读 */
+let voiceQueue = [], currentSpeak = null, curAudio = null;
+function pickVoice(lang) {
+  const vs = window.speechSynthesis ? speechSynthesis.getVoices() || [] : [];
+  return vs.find(v => v.lang === lang && /晓晓|Xiaoxiao|云希|Yunxi|Huihui|慧慧/i.test(v.name))
+      || vs.find(v => v.lang === lang);
+}
+function setSpeaking(on) {
+  document.querySelectorAll('.voice-btn').forEach(b => b.classList.toggle('speaking', on));
+}
+function stopSpeak() {
+  if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch(e){} }
+  if (curAudio) { try { curAudio.pause(); curAudio.currentTime = 0; } catch(e){} curAudio = null; }
+  voiceQueue = [];
+  setSpeaking(false);
+}
+function runQueue() {
+  if (!voiceQueue.length) { curAudio = null; setSpeaking(false); return; }
+  const it = voiceQueue.shift();
+  if (it.file) {
+    // 本地日语发音文件
+    curAudio = new Audio('voice/' + encodeURIComponent(it.file) + '.mp3');
+    curAudio.onended = runQueue;
+    curAudio.onerror = runQueue;
+    const p = curAudio.play();
+    if (p && p.catch) p.catch(() => runQueue());
+  } else {
+    // 中文语音朗读
+    if (!window.speechSynthesis) { runQueue(); return; }
+    const u = new SpeechSynthesisUtterance(it.text);
+    const v = pickVoice(it.lang || 'zh-CN');
+    u.lang = it.lang || 'zh-CN'; if (v) u.voice = v;
+    u.rate = 1.0; u.pitch = 1; u.volume = 1;
+    u.onend = runQueue; u.onerror = runQueue;
+    try { speechSynthesis.speak(u); } catch(e) { runQueue(); }
+  }
+}
+function speakSeq(items) {
+  stopSpeak();
+  voiceQueue = items.slice();
+  setSpeaking(true);
+  runQueue();
+}
+function bindVoiceBtn() {
+  const b = detail.querySelector('.voice-btn');
+  if (b) b.onclick = () => { if (currentSpeak) currentSpeak(); };
+}
+
+const CATS = {
+  alkali:     ['碱金属', '#f2866e', '位于第 1 族，最外层只有 1 个电子，化学性质活泼，易与水反应生成碱。'],
+  alkaline:   ['碱土金属', '#f5ba66', '位于第 2 族，最外层有 2 个电子，活泼性仅次于碱金属。'],
+  transition: ['过渡金属', '#e37878', '位于元素周期表 d 区，多具有良好的导电性、延展性，常形成有色化合物。'],
+  post:       ['后过渡金属', '#74c79a', '位于 p 区左侧，通常熔点偏低、质地较软。'],
+  metalloid:  ['类金属', '#5cc7bd', '性质介于金属与非金属之间，常作为半导体材料使用。'],
+  nonmetal:   ['非金属', '#7fb0e8', '通常不导电、不导热，是构成生命物质的主要元素。'],
+  halogen:    ['卤素', '#ad93e8', '位于第 17 族，最外层有 7 个电子，容易得到电子形成盐类。'],
+  noble:      ['稀有气体', '#e58fb8', '位于第 18 族，最外层电子已排满，化学性质极不活泼。'],
+  lanthanide: ['镧系元素', '#8ed1b4', '又称稀土元素，化学性质相近，广泛用于磁性材料与发光材料。'],
+  actinide:   ['锕系元素', '#c79adf', '多为放射性元素，其中铀、钚可用于核能。']
+};
+
+const E = [
+[1,'H','氢','1.008','nonmetal',1,1],[2,'He','氦','4.003','noble',1,18],
+[3,'Li','锂','6.94','alkali',2,1],[4,'Be','铍','9.012','alkaline',2,2],[5,'B','硼','10.81','metalloid',2,13],[6,'C','碳','12.011','nonmetal',2,14],[7,'N','氮','14.007','nonmetal',2,15],[8,'O','氧','15.999','nonmetal',2,16],[9,'F','氟','18.998','halogen',2,17],[10,'Ne','氖','20.180','noble',2,18],
+[11,'Na','钠','22.990','alkali',3,1],[12,'Mg','镁','24.305','alkaline',3,2],[13,'Al','铝','26.982','post',3,13],[14,'Si','硅','28.085','metalloid',3,14],[15,'P','磷','30.974','nonmetal',3,15],[16,'S','硫','32.06','nonmetal',3,16],[17,'Cl','氯','35.45','halogen',3,17],[18,'Ar','氩','39.948','noble',3,18],
+[19,'K','钾','39.098','alkali',4,1],[20,'Ca','钙','40.078','alkaline',4,2],[21,'Sc','钪','44.956','transition',4,3],[22,'Ti','钛','47.867','transition',4,4],[23,'V','钒','50.942','transition',4,5],[24,'Cr','铬','51.996','transition',4,6],[25,'Mn','锰','54.938','transition',4,7],[26,'Fe','铁','55.845','transition',4,8],[27,'Co','钴','58.933','transition',4,9],[28,'Ni','镍','58.693','transition',4,10],[29,'Cu','铜','63.546','transition',4,11],[30,'Zn','锌','65.38','transition',4,12],[31,'Ga','镓','69.723','post',4,13],[32,'Ge','锗','72.630','metalloid',4,14],[33,'As','砷','74.922','metalloid',4,15],[34,'Se','硒','78.971','nonmetal',4,16],[35,'Br','溴','79.904','halogen',4,17],[36,'Kr','氪','83.798','noble',4,18],
+[37,'Rb','铷','85.468','alkali',5,1],[38,'Sr','锶','87.62','alkaline',5,2],[39,'Y','钇','88.906','transition',5,3],[40,'Zr','锆','91.224','transition',5,4],[41,'Nb','铌','92.906','transition',5,5],[42,'Mo','钼','95.95','transition',5,6],[43,'Tc','锝','98','transition',5,7],[44,'Ru','钌','101.07','transition',5,8],[45,'Rh','铑','102.91','transition',5,9],[46,'Pd','钯','106.42','transition',5,10],[47,'Ag','银','107.87','transition',5,11],[48,'Cd','镉','112.41','transition',5,12],[49,'In','铟','114.82','post',5,13],[50,'Sn','锡','118.71','post',5,14],[51,'Sb','锑','121.76','metalloid',5,15],[52,'Te','碲','127.60','metalloid',5,16],[53,'I','碘','126.90','halogen',5,17],[54,'Xe','氙','131.29','noble',5,18],
+[55,'Cs','铯','132.91','alkali',6,1],[56,'Ba','钡','137.33','alkaline',6,2],
+[57,'La','镧','138.91','lanthanide',6,0],[58,'Ce','铈','140.12','lanthanide',6,0],[59,'Pr','镨','140.91','lanthanide',6,0],[60,'Nd','钕','144.24','lanthanide',6,0],[61,'Pm','钷','145','lanthanide',6,0],[62,'Sm','钐','150.36','lanthanide',6,0],[63,'Eu','铕','151.96','lanthanide',6,0],[64,'Gd','钆','157.25','lanthanide',6,0],[65,'Tb','铽','158.93','lanthanide',6,0],[66,'Dy','镝','162.50','lanthanide',6,0],[67,'Ho','钬','164.93','lanthanide',6,0],[68,'Er','铒','167.26','lanthanide',6,0],[69,'Tm','铥','168.93','lanthanide',6,0],[70,'Yb','镱','173.05','lanthanide',6,0],[71,'Lu','镥','174.97','lanthanide',6,0],
+[72,'Hf','铪','178.49','transition',6,4],[73,'Ta','钽','180.95','transition',6,5],[74,'W','钨','183.84','transition',6,6],[75,'Re','铼','186.21','transition',6,7],[76,'Os','锇','190.23','transition',6,8],[77,'Ir','铱','192.22','transition',6,9],[78,'Pt','铂','195.08','transition',6,10],[79,'Au','金','196.97','transition',6,11],[80,'Hg','汞','200.59','transition',6,12],[81,'Tl','铊','204.38','post',6,13],[82,'Pb','铅','207.2','post',6,14],[83,'Bi','铋','208.98','post',6,15],[84,'Po','钋','209','post',6,16],[85,'At','砹','210','halogen',6,17],[86,'Rn','氡','222','noble',6,18],
+[87,'Fr','钫','223','alkali',7,1],[88,'Ra','镭','226','alkaline',7,2],
+[89,'Ac','锕','227','actinide',7,0],[90,'Th','钍','232.04','actinide',7,0],[91,'Pa','镤','231.04','actinide',7,0],[92,'U','铀','238.03','actinide',7,0],[93,'Np','镎','237','actinide',7,0],[94,'Pu','钚','244','actinide',7,0],[95,'Am','镅','243','actinide',7,0],[96,'Cm','锔','247','actinide',7,0],[97,'Bk','锫','247','actinide',7,0],[98,'Cf','锎','251','actinide',7,0],[99,'Es','锿','252','actinide',7,0],[100,'Fm','镄','257','actinide',7,0],[101,'Md','钔','258','actinide',7,0],[102,'No','锘','259','actinide',7,0],[103,'Lr','铹','262','actinide',7,0],
+[104,'Rf','𬬻','267','transition',7,4],[105,'Db','𬭊','268','transition',7,5],[106,'Sg','𬭳','269','transition',7,6],[107,'Bh','𬭛','270','transition',7,7],[108,'Hs','𬭶','269','transition',7,8],[109,'Mt','鿏','278','transition',7,9],[110,'Ds','𫟼','281','transition',7,10],[111,'Rg','𬬭','282','transition',7,11],[112,'Cn','鿔','285','transition',7,12],[113,'Nh','鿭','286','post',7,13],[114,'Fl','𫓧','289','post',7,14],[115,'Mc','镆','290','post',7,15],[116,'Lv','𫟷','293','post',7,16],[117,'Ts','鿬','294','halogen',7,17],[118,'Og','鿫','294','noble',7,18]
+];
+
+const table = document.getElementById('ptable');
+const detail = document.getElementById('detail');
+const legend = document.getElementById('legend');
+let filter = null, selected = null;
+
+Object.entries(CATS).forEach(([key, v]) => {
+  const b = document.createElement('button');
+  b.innerHTML = `<span class="dot" style="background:${v[1]}"></span>${v[0]}`;
+  b.onclick = () => { filter = filter === key ? null : key; syncLegend(); applyFilter(); };
+  b.dataset.key = key;
+  legend.appendChild(b);
+});
+function syncLegend() { [...legend.children].forEach(b => b.classList.toggle('on', b.dataset.key === filter)); }
+
+E.forEach(data => {
+  const [z, sym, cn, mass, cat, period, group] = data;
+  const el = document.createElement('div');
+  el.className = 'el';
+  el.style.setProperty('--c', CATS[cat][1]);
+  el.dataset.key = cat; el.dataset.z = z;
+  const row = (z >= 57 && z <= 71) ? 9 : (z >= 89 && z <= 103) ? 10 : period;
+  const col = (z >= 57 && z <= 71) ? 3 + (z - 57) : (z >= 89 && z <= 103) ? 3 + (z - 89) : group;
+  el.style.gridRow = row; el.style.gridColumn = col;
+  el.title = `${cn} · ${sym} · 第 ${z} 号`;
+  el.innerHTML = `<span class="num">${z}</span><span class="sym">${sym}</span><span class="cn">${cn}</span><span class="mass">${mass}</span>`;
+  el.onclick = ev => { show(z); markClicked(ev.currentTarget); };
+  el.ondblclick = ev => { show(z); markClicked(ev.currentTarget); currentSpeak(); };
+  table.appendChild(el);
+});
+
+function markClicked(node) {
+  document.querySelectorAll('.clicked').forEach(n => n.classList.remove('clicked'));
+  if (node) node.classList.add('clicked');
+}
+function show(z) {
+  const [num, sym, cn, mass, cat, period, group] = E.find(x => x[0] === z);
+  const c = CATS[cat];
+  selected = z;
+  [...table.querySelectorAll('.el')].forEach(e => e.classList.toggle('sel', +e.dataset.z === z));
+  const zone = (cat === 'alkali' || cat === 'alkaline') ? 's 区' : cat === 'transition' ? 'd 区'
+    : (cat === 'lanthanide' || cat === 'actinide') ? 'f 区' : 'p 区';
+  detail.innerHTML = `
+    <span class="detail-close">✕</span>
+    <div class="bigel" style="--c:${c[1]}">
+      <span class="num">${num}</span><span class="s">${sym}</span><span class="n">${cn} · ${mass}</span>
+    </div>
+    <div>
+      <div class="dtitle" style="--c:${c[1]}"><h2>${cn}</h2><span class="tag">${c[0]}</span></div>
+      <div class="props">
+        <div class="prop"><div class="k">原子序数</div><div class="v">${num}</div></div>
+        <div class="prop"><div class="k">相对原子质量（近似）</div><div class="v">${mass}</div></div>
+        <div class="prop"><div class="k">周期</div><div class="v">第 ${period} 周期</div></div>
+        <div class="prop"><div class="k">族</div><div class="v">${group ? '第 ' + group + ' 族' : (cat === 'lanthanide' ? '镧系' : '锕系')}</div></div>
+        <div class="prop"><div class="k">分区</div><div class="v">${zone}</div></div>
+      </div>
+      <div class="desc">${c[2]}</div>
+      <button class="voice-btn">🔊 朗读详情</button>
+    </div>`;
+  detail.classList.add('show');
+  currentSpeak = () => speakSeq([
+    { text: `${cn}。第 ${num} 号元素，相对原子质量 ${mass}。第 ${period} 周期，${group ? '第 ' + group + ' 族' : (cat === 'lanthanide' ? '镧系' : '锕系')}，${zone}。`, lang: 'zh-CN' },
+    { text: c[2], lang: 'zh-CN' }
+  ]);
+  bindVoiceBtn();
+}
+function applyFilter() {
+  [...table.querySelectorAll('.el')].forEach(e => e.classList.toggle('dim', !!filter && e.dataset.key !== filter));
+}
+document.getElementById('search').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  const els = [...table.querySelectorAll('.el')];
+  if (!q) { els.forEach(el => el.classList.remove('dim', 'match')); applyFilter(); return; }
+  filter = null; syncLegend();
+  els.forEach(el => {
+    const z = +el.dataset.z; const d = E.find(x => x[0] === z);
+    const ok = [d[1].toLowerCase(), d[2], String(z)].some(s => s.includes(q));
+    el.classList.toggle('match', ok); el.classList.toggle('dim', !ok);
+  });
+});
+document.addEventListener('click', e => {
+  if (e.target.closest('.detail-close') || (detail.classList.contains('show') && !e.target.closest('.el') && !e.target.closest('.kana-cell') && !e.target.closest('.detail'))) {
+    stopSpeak(); detail.classList.remove('show'); markClicked(null);
+  }
+});
+
+const KANA = [
+  ['あ行', '#f2866e', [['あ','ア','a'],['い','イ','i'],['う','ウ','u'],['え','エ','e'],['お','オ','o']]],
+  ['か行', '#f5ba66', [['か','カ','ka'],['き','キ','ki'],['く','ク','ku'],['け','ケ','ke'],['こ','コ','ko']]],
+  ['さ行', '#e37878', [['さ','サ','sa'],['し','シ','shi'],['す','ス','su'],['せ','セ','se'],['そ','ソ','so']]],
+  ['た行', '#74c79a', [['た','タ','ta'],['ち','チ','chi'],['つ','ツ','tsu'],['て','テ','te'],['と','ト','to']]],
+  ['な行', '#5cc7bd', [['な','ナ','na'],['に','ニ','ni'],['ぬ','ヌ','nu'],['ね','ネ','ne'],['の','ノ','no']]],
+  ['は行', '#7fb0e8', [['は','ハ','ha'],['ひ','ヒ','hi'],['ふ','フ','fu'],['へ','ヘ','he'],['ほ','ホ','ho']]],
+  ['ま行', '#ad93e8', [['ま','マ','ma'],['み','ミ','mi'],['む','ム','mu'],['め','メ','me'],['も','モ','mo']]],
+  ['や行', '#8ed1b4', [['や','ヤ','ya'],null,['ゆ','ユ','yu'],null,['よ','ヨ','yo']]],
+  ['ら行', '#e58fb8', [['ら','ラ','ra'],['り','リ','ri'],['る','ル','ru'],['れ','レ','re'],['ろ','ロ','ro']]],
+  ['わ行', '#c79adf', [['わ','ワ','wa'],null,null,null,['を','ヲ','wo']]]
+];
+const EXTRA = [
+  ['が行', '#f2866e', [['が','ガ','ga'],['ぎ','ギ','gi'],['ぐ','グ','gu'],['げ','ゲ','ge'],['ご','ゴ','go']]],
+  ['ざ行', '#f5ba66', [['ざ','ザ','za'],['じ','ジ','ji'],['ず','ズ','zu'],['ぜ','ゼ','ze'],['ぞ','ゾ','zo']]],
+  ['だ行', '#e37878', [['だ','ダ','da'],['ぢ','ヂ','ji'],['づ','ヅ','zu'],['で','デ','de'],['ど','ド','do']]],
+  ['ば行', '#74c79a', [['ば','バ','ba'],['び','ビ','bi'],['ぶ','ブ','bu'],['べ','ベ','be'],['ぼ','ボ','bo']]],
+  ['ぱ行', '#7fb0e8', [['ぱ','パ','pa'],['ぴ','ピ','pi'],['ぷ','プ','pu'],['ぺ','ペ','pe'],['ぽ','ポ','po']]]
+];
+const KANA_INFO = {
+ 'あ':['元音，口型自然张开，近似汉语「啊」。',[['あい','愛','爱'],['あさ','朝','早晨']]],
+ 'い':['元音，嘴角向两侧拉开，近似「衣」。',[['いえ','家','家'],['いぬ','犬','狗']]],
+ 'う':['元音，双唇略收圆但放松，近似「乌」。',[['うみ','海','大海'],['うさぎ','兎','兔子']]],
+ 'え':['元音，近似汉语「诶」。',[['えき','駅','车站'],['え','絵','图画']]],
+ 'お':['元音，双唇收圆，近似「哦」。',[['おと','音','声音'],['おいしい','美味しい','好吃']]],
+ 'か':['清音，舌根送气，近似「卡」。',[['かき','柿','柿子'],['かわ','川','河流']]],
+ 'き':['近似「基」，舌面音。',[['きく','菊','菊花'],['き','木','树']]],
+ 'く':['近似「库」，短促。',[['くつ','靴','鞋子'],['くま','熊','熊']]],
+ 'け':['近似「开」的轻读。',[['けさ','今朝','今天早晨'],['け','毛','毛']]],
+ 'こ':['近似「扣」的轻读。',[['こども','子供','孩子'],['ここ','','这里']]],
+ 'さ':['近似「撒」，舌尖靠近上齿。',[['さくら','桜','樱花'],['さかな','魚','鱼']]],
+ 'し':['舌面音，近似「西」。',[['しお','塩','盐'],['しろ','白','白色']]],
+ 'す':['近似「苏」，元音较轻。',[['すし','寿司','寿司'],['すな','砂','沙子']]],
+ 'せ':['近似「赛」的轻读。',[['せかい','世界','世界'],['せんせい','先生','老师']]],
+ 'そ':['近似「索」。',[['そら','空','天空'],['そこ','','那里']]],
+ 'た':['近似「他」，舌尖抵上齿。',[['たこ','蛸','章鱼'],['たいよう','太陽','太阳']]],
+ 'ち':['舌面音，近似「七」。',[['ちかてつ','地下鉄','地铁'],['ち','地','大地']]],
+ 'つ':['近似「次」，但双唇收圆。',[['つき','月','月亮'],['つくえ','机','桌子']]],
+ 'て':['近似「忒」的轻读。',[['て','手','手'],['てがみ','手紙','信']]],
+ 'と':['近似「托」。',[['とけい','時計','时钟'],['と','戸','门']]],
+ 'な':['鼻音，近似「那」。',[['なつ','夏','夏天'],['なまえ','名前','名字']]],
+ 'に':['近似「尼」。',[['にく','肉','肉'],['にほん','日本','日本']]],
+ 'ぬ':['近似「努」。',[['ぬの','布','布'],['ぬ','','涂']]],
+ 'ね':['近似「内」的轻读。',[['ねこ','猫','猫'],['ね','根','根']]],
+ 'の':['近似「诺」。',[['のり','海苔','海苔'],['の','野','田野']]],
+ 'は':['送气音，近似「哈」。',[['はな','花','花'],['は','葉','叶子']]],
+ 'ひ':['近似「希」。',[['ひと','人','人'],['ひ','火','火']]],
+ 'ふ':['唇齿音，近似「夫」。',[['ふゆ','冬','冬天'],['ふじさん','富士山','富士山']]],
+ 'へ':['近似「嘿」的轻读。',[['へや','部屋','房间'],['へ','壁','墙壁']]],
+ 'ほ':['近似「豁」，双唇收圆。',[['ほし','星','星星'],['ほん','本','书']]],
+ 'ま':['鼻音，近似「妈」。',[['まど','窓','窗户'],['まいにち','毎日','每天']]],
+ 'み':['近似「米」。',[['みず','水','水'],['み','実','果实']]],
+ 'む':['近似「木」。',[['むし','虫','虫子'],['むこう','向こう','对面']]],
+ 'め':['近似「妹」的轻读。',[['め','目','眼睛'],['めがね','眼鏡','眼镜']]],
+ 'も':['近似「摸」。',[['もの','物','东西'],['もり','森','森林']]],
+ 'や':['半元音，近似「呀」。',[['やま','山','山'],['や','家','家']]],
+ 'ゆ':['近似「优」。',[['ゆき','雪','雪'],['ゆ','湯','热水']]],
+ 'よ':['近似「哟」。',[['よる','夜','夜晚'],['よ','世','世间']]],
+ 'ら':['舌尖闪音，近似「拉」。',[['らく','楽','轻松'],['らいねん','来年','明年']]],
+ 'り':['近似「里」。',[['りんご','林檎','苹果'],['り','理','道理']]],
+ 'る':['近似「噜」。',[['るす','留守','不在家'],['るい','類','类别']]],
+ 'れ':['近似「类」的轻读。',[['れい','礼','礼貌'],['れきし','歴史','历史']]],
+ 'ろ':['近似「啰」。',[['ろく','六','六'],['ろ','路','路']]],
+ 'わ':['半元音，近似「哇」。',[['わたし','私','我'],['わ','輪','圆环']]],
+ 'を':['只作宾格助词使用，读音同「お」。',[['ほんをよむ','本を読む','读书']]],
+ 'ん':['拨音，随后续音读作 n / m / ng。',[['にほん','日本','日本'],['さん','三','三']]],
+ 'が':['か行浊音，声带振动，近似「嘎」。',[['がくせい','学生','学生'],['が','画','图画']]],
+ 'ぎ':['き行浊音，近似「gi」。',[['ぎんこう','銀行','银行'],['ぎ','義','义']]],
+ 'ぐ':['く行浊音，近似「gu」。',[['ぐあい','具合','状况'],['ぐ','愚','愚']]],
+ 'げ':['け行浊音，近似「ge」。',[['げんき','元気','精神'],['げ','下','下']]],
+ 'ご':['こ行浊音，近似「go」。',[['ごはん','ご飯','米饭'],['ご','五','五']]],
+ 'ざ':['さ行浊音，近似「za」。',[['ざっし','雑誌','杂志'],['ざ','座','座']]],
+ 'じ':['し行浊音，与「ぢ」同音，近似「ji」。',[['じかん','時間','时间'],['じ','字','字']]],
+ 'ず':['す行浊音，与「づ」同音，近似「zu」。',[['ずっと','','一直'],['ず','図','图']]],
+ 'ぜ':['せ行浊音，近似「ze」。',[['ぜんぶ','全部','全部'],['ぜ','税','税']]],
+ 'ぞ':['そ行浊音，近似「zo」。',[['ぞう','象','大象'],['ぞく','族','族']]],
+ 'だ':['た行浊音，近似「da」。',[['だいがく','大学','大学'],['だ','打','打']]],
+ 'ぢ':['ち行浊音，现代日语多与「じ」同音。',[['ぢばん','地盤','地基'],['ちぢむ','縮む','缩小']]],
+ 'づ':['つ行浊音，现代日语多与「ず」同音。',[['つづく','続く','继续'],['づ','図','图']]],
+ 'で':['て行浊音，近似「de」。',[['でんしゃ','電車','电车'],['で','出','出']]],
+ 'ど':['と行浊音，近似「do」。',[['どこ','','哪里'],['ど','度','度']]],
+ 'ば':['は行浊音，声带振动，近似「ba」。',[['ばん','晩','晚上'],['ば','場','场所']]],
+ 'び':['は行浊音，近似「bi」。',[['びょうき','病気','生病'],['び','美','美']]],
+ 'ぶ':['は行浊音，近似「bu」。',[['ぶか','部下','部下'],['ぶ','部','部门']]],
+ 'べ':['は行浊音，近似「be」。',[['べんきょう','勉強','学习'],['べ','別','别']]],
+ 'ぼ':['は行浊音，近似「bo」。',[['ぼく','僕','我（男）'],['ぼ','本','本']]],
+ 'ぱ':['は行半浊音，送气清音，近似「pa」。',[['ぱちぱち','','啪啪（拍手）'],['ぱん','パン','面包']]],
+ 'ぴ':['は行半浊音，近似「pi」。',[['ぴかぴか','','闪闪发光'],['ぴあの','ピアノ','钢琴']]],
+ 'ぷ':['は行半浊音，近似「pu」。',[['ぷかぷか','','漂浮'],['ぷーる','プール','游泳池']]],
+ 'ぺ':['は行半浊音，近似「pe」。',[['ぺこぺこ','','直鞠躬'],['ぺん','ペン','钢笔']]],
+ 'ぽ':['は行半浊音，近似「po」。',[['ぽかぽか','','暖洋洋'],['ぽすと','ポスト','邮筒']]]
+};
+function showKana(hira, kata, roma, color, rowName) {
+  const info = KANA_INFO[hira];
+  const note = info ? info[0] : '日语假名。';
+  const words = info ? info[1] : [];
+  detail.innerHTML = `
+    <span class="detail-close">✕</span>
+    <div class="kbig" style="--c:${color}">
+      <span class="kh">${hira}</span>
+      <span class="kline"><span class="kk">${kata}</span><span class="kr">${roma}</span></span>
+    </div>
+    <div>
+      <div class="dtitle" style="--c:${color}"><h2>${rowName} · ${hira}</h2><span class="tag">${roma}</span></div>
+      <div class="knote">${note}</div>
+      <div class="kwords">
+        ${words.map(w => `<div class="kword" style="--c:${color}"><span class="wj">${w[0]}</span><span class="wk">${w[1]}</span><span class="wc">${w[2]}</span></div>`).join('')}
+      </div>
+      <button class="voice-btn">🔊 朗读发音与例词</button>
+    </div>`;
+  detail.classList.add('show');
+  const seq = [{ file: hira }];
+  words.forEach(w => { if (w[0]) seq.push({ file: w[0] }); });
+  words.forEach(w => { if (w[2]) seq.push({ text: w[2], lang: 'zh-CN' }); });
+  currentSpeak = () => speakSeq(seq);
+  bindVoiceBtn();
+}
+function buildKana(grid, rows) {
+  grid.appendChild(Object.assign(document.createElement('div'), {className:'colh', textContent:''}));
+  ['あ段','い段','う段','え段','お段'].forEach(t => {
+    grid.appendChild(Object.assign(document.createElement('div'), {className:'colh', textContent:t}));
+  });
+  rows.forEach(([name, color, cells]) => {
+    const h = document.createElement('div');
+    h.className = 'rowh'; h.style.setProperty('--c', color); h.textContent = name;
+    grid.appendChild(h);
+    cells.forEach(c => {
+      const cell = document.createElement('div');
+      if (!c) { cell.className = 'kana-cell empty'; grid.appendChild(cell); return; }
+      cell.className = 'kana-cell'; cell.style.setProperty('--c', color);
+      cell.innerHTML = `<span class="hira">${c[0]}</span><span class="side"><span class="kata">${c[1]}</span><span class="roma">${c[2]}</span></span>`;
+      cell.onclick = ev => { showKana(c[0], c[1], c[2], color, name); markClicked(ev.currentTarget); };
+      cell.ondblclick = ev => { showKana(c[0], c[1], c[2], color, name); markClicked(ev.currentTarget); currentSpeak(); };
+      grid.appendChild(cell);
+    });
+  });
+}
+const kanaGrid = document.getElementById('kanaGrid');
+buildKana(kanaGrid, KANA);
+const nH = document.createElement('div');
+nH.className = 'rowh'; nH.style.setProperty('--c', '#9aa6b6'); nH.textContent = '拨音';
+kanaGrid.appendChild(nH);
+const nCell = document.createElement('div');
+nCell.className = 'kana-cell'; nCell.style.setProperty('--c', '#9aa6b6'); nCell.style.gridColumn = '2 / 5';
+nCell.innerHTML = `<span class="hira">ん</span><span class="side"><span class="kata">ン</span><span class="roma">n</span></span>`;
+nCell.onclick = ev => { showKana('ん','ン','n','#9aa6b6','拨音'); markClicked(ev.currentTarget); };
+nCell.ondblclick = ev => { showKana('ん','ン','n','#9aa6b6','拨音'); markClicked(ev.currentTarget); currentSpeak(); };
+kanaGrid.appendChild(nCell);
+buildKana(document.getElementById('exGrid'), EXTRA);
+</script>
+</body>
+</html>

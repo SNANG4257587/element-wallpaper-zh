@@ -1,0 +1,12 @@
+{
+  "AppVersion": "1.0.0.0",
+  "Title": "元素周期表 中文版",
+  "Thumbnail": "thumbnail.jpg",
+  "Preview": "thumbnail.jpg",
+  "Desc": "交互式中文元素周期表，118 个元素，按类别配色，可点击查看详情。",
+  "Author": "阿澈",
+  "License": "",
+  "Contact": "",
+  "Type": 1,
+  "FileName": "index.html"
+}
